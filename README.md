@@ -32,6 +32,14 @@ python -m train.train_sfcontrol   --endeffector_conditioned   --endeffector_only
 python -m train.train_sfcontrol   --endeffector_conditioned   --endeffector_selection_scheme all_endeffectors   --head   --diffusion_steps 50   --latent_dim 512   --dataset humanml   --data_rep glo_root
 ```
 
+### Stage1 Model on LAFAN1 (this fork)
+Preprocess LAFAN1 (YBot retarget, 60 fps, no text), then train with `--dataset lafan`:
+```bash
+python -m LAFAN_process.preprocess_lafan
+python -m train.train_sfcontrol   --endeffector_conditioned   --endeffector_only   --endeffector_selection_scheme random_joints   --head   --diffusion_steps 50   --latent_dim 128   --lambda_ric_pos 0.1   --lambda_ric_vel 10.0   --lambda_ric_fc 10.0   --dataset lafan   --data_rep glo_joints   --num_frames 224
+```
+See [LAFAN_process/README.md](LAFAN_process/README.md) for details. Fixes to the training code made along the way are listed in [docs/implementation_issues.md](docs/implementation_issues.md).
+
 
 ## Citation
 If you find our work helpful, please consider citing:

@@ -21,7 +21,7 @@ from data_loaders.humanml.scripts.motion_process import convert_to_humanml3d
 from torch.cuda import amp
 from typing import List
 import utils.editing_util as inpainting_util
-from data_loaders.humanml.scripts.motion_process import recover_from_ric
+from data_loaders.humanml.scripts.motion_process import recover_from_ric, recover_from_glo_joints
 import torch.nn.functional as F
 from torch import optim
 
@@ -177,6 +177,8 @@ class DiffusionConfig:
     endeffector_only: bool = False
     head: bool = False
     train_keypoint_mask: str = 'none'
+    # True when features are glo_joints (joint positions already global).
+    glo_joints: bool = False
 
 
 class GaussianDiffusion:
@@ -233,6 +235,10 @@ class GaussianDiffusion:
         else:
             self.stage = 2
             self.njoints = 22
+        # Foot speed (m/frame) at or below which a foot counts as in contact
+        # in the ric_fc loss. 0.05 m/frame is 1 m/s at HumanML3D's 20 fps;
+        # train_sfcontrol rescales it to the dataset's frame rate.
+        self.fc_vel_threshold = 0.05
 
         if self.lambda_rcxyz > 0. or self.lambda_vel > 0. or self.lambda_root_vel > 0. or \
                 self.lambda_vel_rcxyz > 0. or self.lambda_fc > 0.:
@@ -348,7 +354,8 @@ class GaussianDiffusion:
         # average over the length
         # [bs]
         non_zero_elements = sum_flat(mask)
-        loss = loss / non_zero_elements
+        # A sample can have no observed keyframes (over_keyframes); give it 0, not NaN.
+        loss = loss / non_zero_elements.clamp(min=1)
         return loss
 
     def q_mean_variance(self, x_start, t):
@@ -2502,8 +2509,13 @@ class GaussianDiffusion:
 
                 target_inv_trans = self.data_inv_transform_fn(target.clone().permute(0, 2, 3, 1)).float()
                 
-                ric_data_gt = recover_from_ric(target_inv_trans, joints_num=self.njoints, abs_3d=self.conf.abs_3d)  # [BS,1,frames, n_joints, 3]
-                ric_data_pred = recover_from_ric(model_output_inv_trans, joints_num=self.njoints, abs_3d=self.conf.abs_3d) # [BS,1,frames,n_joints,3]
+                if self.conf.glo_joints:
+                    # Joint positions are already global; only the root needs recovering.
+                    ric_data_gt = recover_from_glo_joints(target_inv_trans, joints_num=self.njoints)  # [BS,1,frames, n_joints, 3]
+                    ric_data_pred = recover_from_glo_joints(model_output_inv_trans, joints_num=self.njoints) # [BS,1,frames,n_joints,3]
+                else:
+                    ric_data_gt = recover_from_ric(target_inv_trans, joints_num=self.njoints, abs_3d=self.conf.abs_3d)  # [BS,1,frames, n_joints, 3]
+                    ric_data_pred = recover_from_ric(model_output_inv_trans, joints_num=self.njoints, abs_3d=self.conf.abs_3d) # [BS,1,frames,n_joints,3]
 
                 if self.lambda_ric_pos:
                     terms["ric_pos_loss"] = self.abs_joints_loss_humanml3d(ric_data_gt, ric_data_pred, mask)
@@ -2512,7 +2524,7 @@ class GaussianDiffusion:
                     terms["ric_vel_loss"] = self.vel_xyz_loss_humanml3d(ric_data_gt, ric_data_pred, mask)
 
                 if self.lambda_ric_fc:
-                    terms["ric_fc_loss"] = self.foot_contact_loss_humanml3d(ric_data_gt, ric_data_pred, mask, self.stage)
+                    terms["ric_fc_loss"] = self.foot_contact_loss_humanml3d(ric_data_gt, ric_data_pred, mask, self.stage, threshold=self.fc_vel_threshold)
 
 
             if self.lambda_rcxyz > 0.:

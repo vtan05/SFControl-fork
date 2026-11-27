@@ -21,6 +21,9 @@ def get_dataset_class(name):
     elif name == "kit":
         from data_loaders.humanml.data.dataset import KIT
         return KIT
+    elif name == "lafan":
+        from LAFAN_process.dataset_lafan import LAFAN1
+        return LAFAN1
     else:
         raise ValueError(f'Unsupported dataset name [{name}]')
 
@@ -29,7 +32,7 @@ def get_collate_fn(name, hml_mode='train'):
     if hml_mode == 'gt':
         from data_loaders.humanml.data.dataset import collate_fn as t2m_eval_collate
         return t2m_eval_collate
-    if name in ["humanml", "kit"]:
+    if name in ["humanml", "kit", "lafan"]:
         return t2m_collate
     elif name == 'amass':
         return amass_collate
@@ -76,6 +79,12 @@ def get_dataset(conf: DatasetConfig):
                        fc=conf.fc,
                        data_rep=conf.data_rep,)
     
+    elif conf.name == "lafan":
+        dataset = DATA(split=conf.split,
+                       num_frames=conf.num_frames,
+                       endeffector_only=conf.endeffector_only,
+                       head=conf.head,
+                       data_rep=conf.data_rep)
     elif conf.name == "amass":
         dataset = DATA(split=conf.split)
     else:

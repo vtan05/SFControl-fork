@@ -1,0 +1,41 @@
+{
+  "src_root": "/NAS/Personal/HaeminKim/06_Research/00_Data/Geno_Holden/LAFAN1_resolved/to_YBot",
+  "split_file": "/NAS/Personal/HaeminKim/06_Research/00_Data/Geno_Holden/LAFAN1_resolved/to_YBot/file_splits_no_obs.yaml",
+  "fps": 60,
+  "joint_order": [
+    "Hips",
+    "LeftUpLeg",
+    "RightUpLeg",
+    "Spine",
+    "LeftLeg",
+    "RightLeg",
+    "Spine1",
+    "LeftFoot",
+    "RightFoot",
+    "Spine2",
+    "LeftToeBase",
+    "RightToeBase",
+    "Neck",
+    "LeftShoulder",
+    "RightShoulder",
+    "Head",
+    "LeftArm",
+    "RightArm",
+    "LeftForeArm",
+    "RightForeArm",
+    "LeftHand",
+    "RightHand"
+  ],
+  "lengths": [
+    30,
+    73,
+    115,
+    158,
+    200
+  ],
+  "stats_stride": 60,
+  "n_sequences": {
+    "train": 100,
+    "val": 20
+  }
+}

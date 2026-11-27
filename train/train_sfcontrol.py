@@ -10,6 +10,7 @@ from utils.parser_util import train_args
 from utils import dist_util
 from train.training_loop import TrainLoop
 from data_loaders.get_data import DatasetConfig, get_dataset_loader
+from diffusion import logger
 from utils.model_util import create_model_and_diffusion
 from configs import card
 
@@ -17,14 +18,16 @@ from configs import card
 def main():
     args = train_args(base_cls=card.motion_abs_unet_adagn_xl) # Choose the default full motion model from GMD
 
+    # 't2m' keeps the original HumanML3D folder names.
+    prefix = "t2m" if args.dataset == "humanml" else args.dataset
     if args.endeffector_only:
         if not args.endeffector_conditioned:
             args.endeffector_selection_scheme = "none"
-        model_info = "t2m_stage1_{}_{}".format(args.data_rep, args.endeffector_selection_scheme)
-        
+        model_info = "{}_stage1_{}_{}".format(prefix, args.data_rep, args.endeffector_selection_scheme)
+
     else:
-        model_info = "t2m_stage2_{}_{}".format(args.data_rep, args.endeffector_selection_scheme)
-        
+        model_info = "{}_stage2_{}_{}".format(prefix, args.data_rep, args.endeffector_selection_scheme)
+
 
     args.save_dir = os.path.join("save", model_info)
     pprint(args.__dict__)
@@ -38,6 +41,9 @@ def main():
     with open(args_path, 'w') as fw:
         json.dump(vars(args), fw, indent=4, sort_keys=True)
 
+    # Losses go to stdout, <save_dir>/log.txt and <save_dir>/progress.csv
+    # every --log_interval steps.
+    logger.configure(dir=args.save_dir, format_strs=['stdout', 'log', 'csv'])
     dist_util.setup_dist(args.device)
 
     print("creating data loader...")
@@ -68,7 +74,10 @@ def main():
         diffusion.data_inv_transform_fn = data.dataset.t2m_dataset.inv_transform_stage1
     else:
         diffusion.data_inv_transform_fn = data.dataset.t2m_dataset.inv_transform
-
+    # The foot-contact threshold is per frame; keep it at 1 m/s for any fps.
+    fps = getattr(data.dataset.t2m_dataset, 'fps', 20)
+    diffusion.fc_vel_threshold = 0.05 * 20 / fps
+    print(f'foot-contact threshold: {diffusion.fc_vel_threshold:.4f} m/frame at {fps} fps')
 
     print('Total params: %.2fM' %
           (sum(p.numel() for p in model.parameters_wo_clip()) / 1000000.0))

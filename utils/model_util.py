@@ -58,7 +58,7 @@ def get_model_args(args: FullModelOptions, data: DataLoader):
     njoints = 25
     nfeats = 6
 
-    if args.dataset in ['humanml', "taskall", 'couch', 'circle', 'hsc', 'cimi4d']:
+    if args.dataset in ['humanml', "taskall", 'couch', 'circle', 'hsc', 'cimi4d', 'lafan']:
         data_rep = 'hml_vec'
         nfeats = 1
         if args.endeffector_only:
@@ -184,6 +184,7 @@ def create_gaussian_diffusion(args: FullModelOptions):
             train_x0_as_eps=args.train_x0_as_eps,
             endeffector_only = args.endeffector_only,
             head = args.head,
+            glo_joints=(args.data_rep == 'glo_joints'),
         ),
     )
 

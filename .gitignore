@@ -15,6 +15,7 @@ htmlcov
 .envrc
 
 body_models/
+dataset/LAFAN1/joints/
 runs/
 save/
 smplx_model/

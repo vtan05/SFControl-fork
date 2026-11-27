@@ -153,7 +153,7 @@ class DataOptions:
                          metadata={
                              "help": "Dataset name (choose from list).",
                              "choices":
-                             ['humanml', 'kit', 'humanact12', 'uestc', 'amass', 'taskall', 'couch', 'circle', 'hsc', 'climb']
+                             ['humanml', 'kit', 'humanact12', 'uestc', 'amass', 'taskall', 'couch', 'circle', 'hsc', 'climb', 'lafan']
                          })
     data_dir: str = field(
         default="",

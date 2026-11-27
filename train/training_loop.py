@@ -16,7 +16,6 @@ from diffusion.resample import LossAwareSampler, UniformSampler
 from tqdm import tqdm
 from diffusion.resample import create_named_schedule_sampler
 from data_loaders.humanml.networks.evaluator_wrapper import EvaluatorMDMWrapper
-from eval import eval_humanml, eval_humanact12_uestc
 from data_loaders.get_data import get_dataset_loader
 from torch.cuda import amp
 from utils.parser_util import TrainingOptions
@@ -204,6 +203,8 @@ class TrainLoop:
                 if not (not self.lr_anneal_steps or
                         self.step + self.resume_step < self.lr_anneal_steps):
                     break
+                if self.step + self.resume_step >= self.num_steps:
+                    break
 
                 motion = motion.to(self.device)
                 cond['y'] = {
@@ -234,8 +235,8 @@ class TrainLoop:
                     assert torch.all(cond['obs_mask'] == (cond['obs_mask'] * cond['y']['mask']).bool())
 
                 self.run_step(motion, cond)
-
-                
+                if self.step % self.log_interval == 0:
+                    logger.dumpkvs()
 
                 if self.step > 0 and self.step % self.save_interval == 0:
                     self.save()
@@ -251,6 +252,8 @@ class TrainLoop:
             if not (not self.lr_anneal_steps
                     or self.step + self.resume_step < self.lr_anneal_steps):
                 break
+            if self.step + self.resume_step >= self.num_steps:
+                break
         # Save the last checkpoint if it wasn't already saved.
         if (self.step - 1) % self.save_interval != 0:
             self.save()
@@ -260,6 +263,8 @@ class TrainLoop:
     def evaluate(self):
         if not self.args.eval_during_training:
             return
+        # Imported here because the eval/ package is not in this repository.
+        from eval import eval_humanml, eval_humanact12_uestc
         start_eval = time.time()
         if self.eval_wrapper is not None:
             print('Running evaluation loop: [Should take about 90 min]')

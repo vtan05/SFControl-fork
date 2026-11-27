@@ -596,6 +596,33 @@ def recover_from_ric(data, joints_num, abs_3d=False):
     positions = torch.cat([r_pos.unsqueeze(-2), positions], dim=-2)
 
     return positions
+
+
+def recover_from_glo_joints(data, joints_num):
+    """Joint positions from ``glo_joints`` features.
+
+    The root comes from features 0-3 (heading, x, z, y) as in
+    ``recover_from_ric(abs_3d=True)``. The other joints are stored as global
+    positions already, so they are used as they are (unlike
+    ``recover_from_ric``, which would rotate and translate them again).
+
+    Parameters
+    ----------
+    data : torch.Tensor
+        Un-normalized features ``[..., 4 + (joints_num - 1) * 3 (+ extra)]``.
+    joints_num : int
+        Number of joints including the root (22 for full body, 6 for the
+        stage-1 keyjoints with head).
+
+    Returns
+    -------
+    torch.Tensor
+        Joint positions ``[..., joints_num, 3]``, root first.
+    """
+    _, r_pos = recover_root_rot_pos(data, abs_3d=True)
+    joints = data[..., 4:4 + (joints_num - 1) * 3]
+    joints = joints.reshape(joints.shape[:-1] + (joints_num - 1, 3))
+    return torch.cat([r_pos.unsqueeze(-2), joints], dim=-2)
 '''
 For Text2Motion Dataset
 '''
